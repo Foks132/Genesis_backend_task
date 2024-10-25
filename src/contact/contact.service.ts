@@ -1,29 +1,24 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UseInterceptors } from '@nestjs/common';
 import { CreateContactDto } from './dto/create-contact.dto';
+import { ClsService } from 'nestjs-cls';
 import { ReadContactDto } from './dto/read-contact.dto';
-import { AuthService } from 'src/auth/auth.service';
 import axios from 'axios';
 
 @Injectable()
 export class ContactService {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly clsService: ClsService) { }
 
   async create(createContact?: CreateContactDto): Promise<ReadContactDto | null> {
     if (!createContact) {
       throw new HttpException(
-        'Insert name and firstName, lastName!',
+        'Insert data!',
         HttpStatus.BAD_REQUEST,
       );
     }
-    const authClientData = {
-      clientId: process.env.CLIENT_ID,
-      serviceUrl: process.env.SERVICE_URL,
-    };
-    const auth = await this.authService.authorization(authClientData);
     const config = {
       headers: {
         'Content-Type': 'contenttype=application/json',
-        Authorization: `Bearer ${auth.access_token}`,
+        Authorization: `Bearer ${this.clsService.get('accessToken')}`,
       },
     };
     const data = {
@@ -33,10 +28,10 @@ export class ContactService {
         last_name: createContact?.lastName,
       },
     };
-    console.log(`Created leads: ${data}`);
+    console.log(`Created contact: ${data}`);
     return (
       await axios.post(
-        `https://${auth.base_domain}/api/v4/contacts`,
+        `https://${this.clsService.get('baseDomain')}/api/v4/contacts`,
         data,
         config,
       )
